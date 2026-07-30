@@ -9,7 +9,7 @@ def test_full_pipeline_on_local_file(sine_wav, mocker):
     result = runner.invoke(main, [str(sine_wav)])
 
     assert result.exit_code == 0
-    assert "Verdict" in result.output or result.exit_code == 0
+    assert "Verdict" in result.output
 
 
 def test_full_pipeline_does_not_crash_on_silent_file(silent_wav, mocker):
