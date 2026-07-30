@@ -51,3 +51,18 @@ def test_youtube_url_triggers_download(mocker, sine_wav):
 
     mock_download.assert_called_once_with("https://youtube.com/watch?v=abc")
     assert result.exit_code == 0
+
+
+def test_deep_flag_invokes_ml_analyzer(mocker, sine_wav):
+    _mock_analyzers(mocker)
+    mocker.patch("music_forensics.cli.render_report")
+    mocker.patch("shutil.which", return_value="/usr/bin/ffmpeg")
+    mock_ml = mocker.patch(
+        "music_forensics.analyzers.ml.analyze", return_value=_EMPTY_FINDINGS
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, [str(sine_wav), "--deep"])
+
+    mock_ml.assert_called_once()
+    assert result.exit_code == 0
