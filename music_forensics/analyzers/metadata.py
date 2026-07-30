@@ -6,6 +6,9 @@ _AI_KEYWORDS = frozenset([
     "mubert", "boomy", "soundraw", "aiva", "beatoven", "loudly",
 ])
 
+_ARTIST_KEYS = frozenset(["tpe1", "tpe2", "tcom", "artist", "author"])
+_TITLE_KEYS = frozenset(["tit2", "tit1", "title"])
+
 
 def analyze(audio_path: str) -> list[Finding]:
     try:
@@ -36,8 +39,14 @@ def analyze(audio_path: str) -> list[Finding]:
             ))
             break
 
-    has_artist = any("artist" in str(k).lower() for k in tags.keys())
-    has_title = any("title" in str(k).lower() for k in tags.keys())
+    has_artist = any(
+        str(k).lower() in _ARTIST_KEYS or "artist" in str(k).lower()
+        for k in tags.keys()
+    )
+    has_title = any(
+        str(k).lower() in _TITLE_KEYS or "title" in str(k).lower()
+        for k in tags.keys()
+    )
     if not has_artist and not has_title:
         findings.append(Finding(
             label="Missing Basic Tags",
