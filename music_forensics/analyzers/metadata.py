@@ -38,10 +38,7 @@ def analyze(audio_path: str) -> list[Finding]:
 
     has_artist = any("artist" in str(k).lower() for k in tags.keys())
     has_title = any("title" in str(k).lower() for k in tags.keys())
-    num_tags = len(list(tags.keys()))
-
-    # Only flag missing basic tags if we have very few tags (likely AI-generated or minimal metadata)
-    if not has_artist and not has_title and num_tags > 0 and num_tags < 2:
+    if not has_artist and not has_title:
         findings.append(Finding(
             label="Missing Basic Tags",
             score=0.35,
