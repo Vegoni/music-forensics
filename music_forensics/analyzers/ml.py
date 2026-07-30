@@ -11,7 +11,7 @@ _CACHE_DIR = Path.home() / ".cache" / "music-forensics"
 def _load_pipeline(model_id: str, cache_dir: Path):
     import torch  # noqa: F401 — lazy import; presence check
     from transformers import pipeline
-    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_dir.mkdir(parents=True, exist_ok=True)
     return pipeline(
         "audio-classification",
         model=model_id,
@@ -60,7 +60,7 @@ def analyze(audio_path: str) -> list[Finding]:
         label="ML Classifier",
         score=score,
         evidence=[
-            f"Model: {_MODEL_ID}",
-            f"AI probability: {score:.0%} {label_note}".strip(),
+            f"Model: {_MODEL_ID} (General Synthetic Audio Classifier — not music-specific)",
+            f"AI probability: {score:.0%}" + (f" {label_note}" if label_note else ""),
         ],
     )]
