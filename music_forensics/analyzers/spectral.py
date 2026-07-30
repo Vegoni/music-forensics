@@ -6,7 +6,7 @@ from music_forensics.models import Finding
 
 def analyze(audio_path: str) -> list[Finding]:
     try:
-        y, sr = librosa.load(audio_path, sr=None, mono=True)
+        y, sr = librosa.load(audio_path, sr=None, mono=True, duration=90.0)
     except Exception as e:
         return [Finding(label="Spectral Load Error", score=0.5, evidence=[str(e)])]
 

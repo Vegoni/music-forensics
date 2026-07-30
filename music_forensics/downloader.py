@@ -21,6 +21,8 @@ def download_audio(url: str) -> Path:
             "preferredcodec": "flac",
             "preferredquality": "0",
         }],
+        "download_ranges": yt_dlp.utils.download_range_func(None, [(0, 90)]),
+        "force_keyframes_at_cuts": True,
         "quiet": True,
         "no_warnings": True,
     }
