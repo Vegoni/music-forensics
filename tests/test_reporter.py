@@ -1,4 +1,5 @@
 from io import StringIO
+from unittest.mock import patch
 from rich.console import Console
 from music_forensics.reporter import (
     render_report,
@@ -9,8 +10,12 @@ from music_forensics.reporter import (
 from music_forensics.models import Finding
 
 
-def _make_console() -> Console:
-    return Console(file=StringIO(), force_terminal=True, width=120)
+def _render_capture(findings: dict, source: str = "test_source.wav") -> str:
+    """Render a report and return its text, so assertions can inspect the output."""
+    buf = StringIO()
+    with patch("music_forensics.reporter.console", Console(file=buf, width=120)):
+        render_report(findings, source)
+    return buf.getvalue()
 
 
 def test_score_to_color_green():
@@ -96,13 +101,36 @@ def test_aggregate_score_none_when_every_stage_failed():
     assert aggregate_score(findings) is None
 
 
-def test_render_report_handles_no_verdict():
-    findings = {
+def test_render_report_says_no_verdict_when_nothing_was_measured():
+    out = _render_capture({
         "ML Classifier": [
             Finding(label="Failed", score=0.5, evidence=["boom"], counts_toward_verdict=False)
         ],
-    }
-    render_report(findings, "test_source.wav")
+    })
+    assert "NO VERDICT" in out
+    # The failed row must be shown, but never as a score.
+    assert "not counted" in out
+    assert "50%" not in out
+
+
+def test_render_report_marks_uncounted_rows_without_scoring_them():
+    out = _render_capture({
+        "Metadata": [Finding(label="No AI Tags", score=0.1, evidence=["clean"])],
+        "ML Classifier": [
+            Finding(label="Failed", score=0.5, evidence=["boom"], counts_toward_verdict=False)
+        ],
+    })
+    assert "not counted" in out
+    assert "LIKELY HUMAN-MADE" in out
+    assert "10%" in out
+
+
+def test_render_report_shows_verdict_and_percentage():
+    out = _render_capture({
+        "ML Classifier": [Finding(label="ML Classifier", score=0.95, evidence=["high"])],
+    })
+    assert "LIKELY AI-GENERATED" in out
+    assert "95%" in out
 
 
 def test_render_report_does_not_crash(sine_wav):
