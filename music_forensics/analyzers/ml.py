@@ -27,12 +27,14 @@ def analyze(audio_path: str) -> list[Finding]:
             label="ML Classifier Unavailable",
             score=0.5,
             evidence=["Install torch and transformers: pip install 'music-forensics[deep]'"],
+            counts_toward_verdict=False,
         )]
     except Exception as e:
         return [Finding(
             label="ML Classifier Failed",
             score=0.5,
             evidence=[f"Could not load model: {str(e)[:120]}"],
+            counts_toward_verdict=False,
         )]
 
     try:
@@ -42,6 +44,7 @@ def analyze(audio_path: str) -> list[Finding]:
             label="ML Inference Failed",
             score=0.5,
             evidence=[f"Inference error: {str(e)[:120]}"],
+            counts_toward_verdict=False,
         )]
 
     ai_result = next(

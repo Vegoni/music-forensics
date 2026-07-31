@@ -1,6 +1,11 @@
 from io import StringIO
 from rich.console import Console
-from music_forensics.reporter import render_report, score_to_color, aggregate_score
+from music_forensics.reporter import (
+    render_report,
+    score_to_color,
+    aggregate_score,
+    stage_score,
+)
 from music_forensics.models import Finding
 
 
@@ -23,16 +28,81 @@ def test_score_to_color_red():
     assert score_to_color(1.0) == "red"
 
 
-def test_aggregate_score_average():
+def test_stage_score_averages_findings():
     findings = [
         Finding(label="A", score=0.2, evidence=[]),
         Finding(label="B", score=0.8, evidence=[]),
     ]
-    assert aggregate_score(findings) == 0.5
+    assert stage_score(findings) == 0.5
+
+
+def test_stage_score_ignores_uncounted_findings():
+    findings = [
+        Finding(label="A", score=0.2, evidence=[]),
+        Finding(label="Failed", score=0.5, evidence=[], counts_toward_verdict=False),
+    ]
+    assert stage_score(findings) == 0.2
+
+
+def test_stage_score_none_when_no_measurements():
+    findings = [Finding(label="Failed", score=0.5, evidence=[], counts_toward_verdict=False)]
+    assert stage_score(findings) is None
+
+
+def test_aggregate_score_weighted_average():
+    findings = {
+        "Metadata": [Finding(label="A", score=0.0, evidence=[])],
+        "ML Classifier": [Finding(label="B", score=1.0, evidence=[])],
+    }
+    # Metadata weight 1.0, ML weight 2.0 -> (0.0*1 + 1.0*2) / 3
+    assert aggregate_score(findings) == 2 / 3
+
+
+def test_aggregate_score_is_not_diluted_by_finding_count():
+    """A stage emitting many rows must not outweigh one emitting a single row."""
+    many = {
+        "Metadata": [Finding(label=f"m{i}", score=0.0, evidence=[]) for i in range(10)],
+        "Spectral": [Finding(label="s", score=0.0, evidence=[])],
+        "Waveform": [Finding(label="w", score=0.0, evidence=[])],
+        "ML Classifier": [Finding(label="ml", score=1.0, evidence=[])],
+    }
+    # ML is 2.0 of 5.0 total weight regardless of how many rows Metadata emitted.
+    assert aggregate_score(many) == 0.4
+
+
+def test_failed_ml_stage_does_not_drag_verdict():
+    """A broken analyzer must be ignored, not scored as 0.5."""
+    human = [Finding(label="h", score=0.1, evidence=[])]
+    without_ml = {"Metadata": human, "Spectral": human, "Waveform": human}
+    with_failed_ml = {
+        **without_ml,
+        "ML Classifier": [
+            Finding(label="Failed", score=0.5, evidence=[], counts_toward_verdict=False)
+        ],
+    }
+    assert aggregate_score(with_failed_ml) == aggregate_score(without_ml)
 
 
 def test_aggregate_score_empty():
-    assert aggregate_score([]) == 0.0
+    assert aggregate_score({}) is None
+
+
+def test_aggregate_score_none_when_every_stage_failed():
+    findings = {
+        "ML Classifier": [
+            Finding(label="Failed", score=0.5, evidence=[], counts_toward_verdict=False)
+        ],
+    }
+    assert aggregate_score(findings) is None
+
+
+def test_render_report_handles_no_verdict():
+    findings = {
+        "ML Classifier": [
+            Finding(label="Failed", score=0.5, evidence=["boom"], counts_toward_verdict=False)
+        ],
+    }
+    render_report(findings, "test_source.wav")
 
 
 def test_render_report_does_not_crash(sine_wav):
