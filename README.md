@@ -138,7 +138,7 @@ Scores are color-coded in the terminal: green → yellow → red.
 | Terminal output | [rich](https://github.com/Textualize/rich) |
 | CLI | [click](https://click.palletsprojects.com/) |
 | ML classifier *(optional)* | [transformers](https://huggingface.co/docs/transformers) + [torch](https://pytorch.org/) |
-| ML model *(optional)* | [MelodyMachine/Deepfake-audio-detection-V2](https://huggingface.co/MelodyMachine/Deepfake-audio-detection-V2) |
+| ML model *(optional)* | [AI-Music-Detection/ai_music_detection_large_60s](https://huggingface.co/AI-Music-Detection/ai_music_detection_large_60s) |
 
 ---
 
@@ -147,8 +147,11 @@ Scores are color-coded in the terminal: green → yellow → red.
 **90-second sample window**
 Only the first 90 seconds of audio are analyzed. This is intentional — it keeps analysis fast (under 30 seconds on most machines) and prevents timeouts on long videos. AI artifacts tend to be consistent throughout a track, so 90 seconds is generally sufficient.
 
-**ML model is voice-trained, not music-specific**
-The HuggingFace classifier (`--deep`) was trained primarily on speech deepfakes. It can detect some AI music artifacts but may produce false positives or false negatives on purely instrumental tracks. Treat its output as one signal among many, not a definitive verdict.
+**ML model reflects the generators it was trained on**
+The `--deep` classifier is an Audio Spectrogram Transformer trained on AI-generated versus human-composed music, so it is aimed at the right question. But it learned the artifacts of the generators present in its training data. Newer or unseen generators may evade it, and its accuracy on genres underrepresented in that data is unknown. It is weighted heavily in the verdict but is not proof.
+
+**The ML classifier is 57% of the verdict**
+Stage weights live in `STAGE_WEIGHTS` in `music_forensics/reporter.py`. The ML classifier is weighted above the three heuristic stages combined, so with `--deep` enabled it can carry a verdict over them. Without `--deep`, the verdict rests entirely on heuristics that are far weaker — treat the two modes as different tools.
 
 **Spectral cutoff thresholds are heuristic**
 The 16 kHz frequency cutoff check reflects current AI music generation limitations, but this will improve over time as models get better. A clean high-frequency response doesn't prove the track is human-made.

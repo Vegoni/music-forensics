@@ -54,8 +54,8 @@ def test_aggregate_score_weighted_average():
         "Metadata": [Finding(label="A", score=0.0, evidence=[])],
         "ML Classifier": [Finding(label="B", score=1.0, evidence=[])],
     }
-    # Metadata weight 1.0, ML weight 2.0 -> (0.0*1 + 1.0*2) / 3
-    assert aggregate_score(findings) == 2 / 3
+    # Metadata weight 1.0, ML weight 4.0 -> (0.0*1 + 1.0*4) / 5
+    assert aggregate_score(findings) == 0.8
 
 
 def test_aggregate_score_is_not_diluted_by_finding_count():
@@ -66,8 +66,8 @@ def test_aggregate_score_is_not_diluted_by_finding_count():
         "Waveform": [Finding(label="w", score=0.0, evidence=[])],
         "ML Classifier": [Finding(label="ml", score=1.0, evidence=[])],
     }
-    # ML is 2.0 of 5.0 total weight regardless of how many rows Metadata emitted.
-    assert aggregate_score(many) == 0.4
+    # ML is 4.0 of 7.0 total weight regardless of how many rows Metadata emitted.
+    assert aggregate_score(many) == 4 / 7
 
 
 def test_failed_ml_stage_does_not_drag_verdict():

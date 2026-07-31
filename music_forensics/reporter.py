@@ -23,15 +23,17 @@ def score_to_color(score: float) -> str:
 # heuristic stages contributed a dozen rows between them, so enabling --deep
 # barely moved the result.
 #
-# The ML classifier outweighs any single heuristic stage because it is the only
-# signal trained directly on the question being asked. It is deliberately held
-# below a majority (2.0 against 3.0 combined = 40%) because the pinned model is a
-# general synthetic-audio detector, not a music-specific one.
+# The ML classifier is weighted above the three heuristic stages combined (4.0
+# against 3.0 = 57%) because the pinned model is trained directly on AI-generated
+# versus human-composed music, while the heuristics are indirect proxies —
+# frequency cutoffs and dynamic range are properties of mastering at least as much
+# as of provenance. A purpose-trained detector should be able to carry a verdict
+# over three crude signals rather than be outvoted by them.
 STAGE_WEIGHTS = {
     "Metadata": 1.0,
     "Spectral": 1.0,
     "Waveform": 1.0,
-    "ML Classifier": 2.0,
+    "ML Classifier": 4.0,
 }
 DEFAULT_STAGE_WEIGHT = 1.0
 
