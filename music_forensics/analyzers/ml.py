@@ -2,12 +2,7 @@ import re
 from pathlib import Path
 from music_forensics.models import Finding
 
-# AI-Music-Detection/ai_music_detection_large_60s is an Audio Spectrogram
-# Transformer (fine-tuned from mit/ast-finetuned-audioset-10-10-0.4593) trained on
-# SleepyJesse/ai_music_large — 10k human-composed and 10k AI-generated tracks. It
-# is trained on the question this tool actually asks, unlike the general
-# speech-oriented deepfake detectors it replaced.
-_MODEL_ID = "AI-Music-Detection/ai_music_detection_large_60s"
+_MODEL_ID = "MelodyMachine/Deepfake-audio-detection-V2"
 _CACHE_DIR = Path.home() / ".cache" / "music-forensics"
 
 # The model was trained with a 60-second window. Feeding it more buys nothing and
@@ -128,7 +123,7 @@ def analyze(audio_path: str) -> list[Finding]:
         label="ML Classifier",
         score=score,
         evidence=[
-            f"Model: {_MODEL_ID} (Audio Spectrogram Transformer, trained on AI vs. human music)",
+            f"Model: {_MODEL_ID} (General Synthetic Audio Classifier — not music-specific)",
             f"AI probability: {score:.0%}",
             f"Analyzed first {_MAX_SECONDS:.0f}s at {sample_rate} Hz",
         ],

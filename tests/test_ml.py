@@ -70,7 +70,7 @@ def test_returns_list_of_findings(sine_wav):
         result = analyze(str(sine_wav))
     assert isinstance(result, list)
     assert all(isinstance(f, Finding) for f in result)
-    assert any("ai vs. human music" in e.lower() for f in result for e in f.evidence)
+    assert any("general synthetic audio classifier" in e.lower() for f in result for e in f.evidence)
 
 
 def test_high_ai_score_returns_high_finding_score(sine_wav):
