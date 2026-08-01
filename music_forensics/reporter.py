@@ -15,10 +15,56 @@ def score_to_color(score: float) -> str:
     return "red"
 
 
-def aggregate_score(findings: list[Finding]) -> float:
-    if not findings:
-        return 0.0
-    return sum(f.score for f in findings) / len(findings)
+# Relative influence of each stage on the final verdict.
+#
+# Scoring is per-stage rather than per-finding so that a stage's weight does not
+# depend on how many rows it happens to emit. Under a flat per-finding average the
+# ML classifier — a single row — was worth under 10% of the verdict while the
+# heuristic stages contributed a dozen rows between them, so enabling --deep
+# barely moved the result.
+#
+# The ML classifier is weighted above the three heuristic stages combined (4.0
+# against 3.0 = 57%) because the pinned model is trained directly on AI-generated
+# versus human-composed music, while the heuristics are indirect proxies —
+# frequency cutoffs and dynamic range are properties of mastering at least as much
+# as of provenance. A purpose-trained detector should be able to carry a verdict
+# over three crude signals rather than be outvoted by them.
+STAGE_WEIGHTS = {
+    "Metadata": 1.0,
+    "Spectral": 1.0,
+    "Waveform": 1.0,
+    "ML Classifier": 4.0,
+}
+DEFAULT_STAGE_WEIGHT = 1.0
+
+
+def stage_score(findings: list[Finding]) -> float | None:
+    """Mean of a stage's scored findings, or None if it produced no measurement."""
+    scored = [f for f in findings if f.counts_toward_verdict]
+    if not scored:
+        return None
+    return sum(f.score for f in scored) / len(scored)
+
+
+def aggregate_score(findings_by_stage: dict[str, list[Finding]]) -> float | None:
+    """Weighted mean of per-stage scores.
+
+    Returns None when no stage produced a usable measurement, which the caller
+    must report as "no verdict" rather than as a score of zero.
+    """
+    total_weight = 0.0
+    weighted_sum = 0.0
+    for stage, findings in findings_by_stage.items():
+        score = stage_score(findings)
+        if score is None:
+            continue
+        weight = STAGE_WEIGHTS.get(stage, DEFAULT_STAGE_WEIGHT)
+        weighted_sum += score * weight
+        total_weight += weight
+
+    if total_weight == 0.0:
+        return None
+    return weighted_sum / total_weight
 
 
 def _score_bar(score: float, width: int = 12) -> str:
@@ -34,9 +80,7 @@ def render_report(findings_by_stage: dict[str, list[Finding]], source: str) -> N
         border_style="bright_blue",
     ))
 
-    all_findings: list[Finding] = []
     for stage, findings in findings_by_stage.items():
-        all_findings.extend(findings)
         if not findings:
             continue
         table = Table(
@@ -50,16 +94,31 @@ def render_report(findings_by_stage: dict[str, list[Finding]], source: str) -> N
         table.add_column("Score", justify="center", min_width=18)
         table.add_column("Evidence")
         for f in findings:
-            color = score_to_color(f.score)
-            bar = _score_bar(f.score)
+            if f.counts_toward_verdict:
+                color = score_to_color(f.score)
+                score_cell = f"[{color}]{_score_bar(f.score)} {f.score:.0%}[/{color}]"
+            else:
+                score_cell = "[dim]— not counted[/dim]"
             table.add_row(
                 f.label,
-                f"[{color}]{bar} {f.score:.0%}[/{color}]",
+                score_cell,
                 "\n".join(f.evidence),
             )
         console.print(table)
 
-    overall = aggregate_score(all_findings)
+    overall = aggregate_score(findings_by_stage)
+
+    console.print()
+    if overall is None:
+        console.print(Panel(
+            "[dim][bold]NO VERDICT[/bold]\nNo analyzer produced a usable measurement.[/dim]",
+            title="[bold]Verdict[/bold]",
+            box=box.DOUBLE,
+            border_style="dim",
+        ))
+        console.print()
+        return
+
     color = score_to_color(overall)
     if overall < 0.35:
         verdict = "LIKELY HUMAN-MADE"
@@ -68,7 +127,6 @@ def render_report(findings_by_stage: dict[str, list[Finding]], source: str) -> N
     else:
         verdict = "LIKELY AI-GENERATED"
 
-    console.print()
     console.print(Panel(
         f"[{color}][bold]{verdict}[/bold]\n{_score_bar(overall, 20)} {overall:.0%} AI likelihood[/{color}]",
         title="[bold]Verdict[/bold]",

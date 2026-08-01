@@ -148,7 +148,10 @@ Scores are color-coded in the terminal: green → yellow → red.
 Only the first 90 seconds of audio are analyzed. This is intentional — it keeps analysis fast (under 30 seconds on most machines) and prevents timeouts on long videos. AI artifacts tend to be consistent throughout a track, so 90 seconds is generally sufficient.
 
 **ML model is voice-trained, not music-specific**
-The HuggingFace classifier (`--deep`) was trained primarily on speech deepfakes. It can detect some AI music artifacts but may produce false positives or false negatives on purely instrumental tracks. Treat its output as one signal among many, not a definitive verdict.
+The `--deep` classifier (`MelodyMachine/Deepfake-audio-detection-V2`) was trained primarily on speech deepfakes. It can detect some AI music artifacts but may produce false positives or false negatives on purely instrumental tracks. Treat its output as one signal among many, not a definitive verdict.
+
+**The ML classifier dominates the verdict when enabled**
+Stage weights live in `STAGE_WEIGHTS` in `music_forensics/reporter.py`. The ML classifier is weighted above the three heuristic stages combined, so with `--deep` enabled it can carry a verdict over them. Without `--deep`, the verdict rests entirely on heuristics that are far weaker — treat the two modes as different tools.
 
 **Spectral cutoff thresholds are heuristic**
 The 16 kHz frequency cutoff check reflects current AI music generation limitations, but this will improve over time as models get better. A clean high-frequency response doesn't prove the track is human-made.
